@@ -105,6 +105,7 @@ def copy_repo_tree(src_dir, dst_dir):
             src_full = os.path.join(src_dir, f)
             dst_full = os.path.join(dst_dir, f)
             if os.path.isdir(src_full):
+                rmtree(src_full)
                 shutil.copytree(src_full, dst_full)
             else:
                 shutil.copyfile(src_full, dst_full)
