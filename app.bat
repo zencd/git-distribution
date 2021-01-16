@@ -1,4 +1,4 @@
-@echo off
+::@echo off
 setlocal enableDelayedExpansion
 
 set APP_DIR=%~dp0
@@ -29,4 +29,12 @@ if not exist "%PY_EXE%" (
     if !errorlevel! neq 0 exit /b 1
 )
 
+if "%1" == "--update" (
+    set PYTHONPATH=%APP_DIR%\tools
+    "%PY_EXE%" "%APP_DIR%\tools\update.py"
+    goto end
+)
+
 "%PY_EXE%" "%MAIN_PY%" %*
+
+:end
