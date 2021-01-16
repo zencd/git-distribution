@@ -17,7 +17,7 @@ work_dir = os.path.join(app_dir, 'work')
 repo_dir_tmp = os.path.join(work_dir, 'repo')
 local_history_file = os.path.join(app_dir, 'history.txt')
 tmp_history_file = os.path.join(repo_dir_tmp, 'history.txt')
-local_commit_file = os.path.join(work_dir, 'recent-commit')
+local_commit_file = os.path.join(work_dir, 'recent-commit.txt')
 
 
 def rmtree(dir_):
@@ -57,11 +57,15 @@ def write_current_sha(sha):
 
 
 def read_remote_sha():
-    resp = requests.get(recent_commit_url)
-    if resp.ok:
-        remote_commit = json.loads(resp.text)
-        return remote_commit['sha']
-    return None
+    res = None
+    try:
+        resp = requests.get(recent_commit_url)
+        if resp.ok:
+            remote_commit = json.loads(resp.text)
+            res = remote_commit['sha']
+    except Exception as e:
+        print(f'Error: {e}')
+    return res
 
 
 def read_repo_sha(local_repo: pygit2.Repository):
@@ -81,10 +85,10 @@ def load_remote_history():
 
 
 def load_local_history(history_file):
-    if not os.path.exists(history_file):
-        return []
-    with open(history_file, 'r') as fd:
-        return [line.strip() for line in fd]
+    if os.path.exists(history_file):
+        with open(history_file, 'r') as fd:
+            return [line.strip() for line in fd]
+    return []
 
 
 def print_history_diff(history_before, history_after):
@@ -95,16 +99,15 @@ def print_history_diff(history_before, history_after):
             print(line)
 
 
-def copy_tree(src_dir, dst_dir):
+def copy_repo_tree(src_dir, dst_dir):
     for f in os.listdir(src_dir):
-        if f == '.git':
-            continue
-        src_full = os.path.join(src_dir, f)
-        dst_full = os.path.join(dst_dir, f)
-        if os.path.isdir(src_full):
-            shutil.copytree(src_full, dst_full)
-        else:
-            shutil.copyfile(src_full, dst_full)
+        if f != '.git':
+            src_full = os.path.join(src_dir, f)
+            dst_full = os.path.join(dst_dir, f)
+            if os.path.isdir(src_full):
+                shutil.copytree(src_full, dst_full)
+            else:
+                shutil.copyfile(src_full, dst_full)
 
 
 def main():
@@ -113,8 +116,6 @@ def main():
 
     history_before = load_local_history(local_history_file)
 
-    repo = None
-
     local_sha = read_current_sha()
     remote_sha = read_remote_sha()
 
@@ -122,20 +123,18 @@ def main():
     git_clone(git_url, repo_dir_tmp, git_branch)
     repo_tmp = pygit2.Repository(repo_dir_tmp)
     tmp_sha = read_repo_sha(repo_tmp)
-    write_current_sha(tmp_sha)
 
-    copy_tree(repo_dir_tmp, 'C:\\tempo\\333')
+    has_update = (local_sha != tmp_sha) or (local_sha is None)
+    if has_update:
+        copy_repo_tree(repo_dir_tmp, 'C:\\tempo\\333')
+        write_current_sha(tmp_sha)
+        history_after = load_local_history(tmp_history_file)
+        print_history_diff(history_before, history_after)
+        print('Updated to the recent version')
+    else:
+        print('Nothing to update')
 
-    # todo rmtree(repo_dir_tmp)
-
-    # rmtree(repo_dir)
-    # shutil.copytree(repo_dir_tmp, repo_dir)
-    # rmtree(repo_dir_tmp)
-    print('Updated to the recent version')
-
-    history_after = load_local_history(tmp_history_file)
-    print_history_diff(history_before, history_after)
-    stop = 1
+    rmtree(repo_dir_tmp)
 
 
 if __name__ == '__main__':
