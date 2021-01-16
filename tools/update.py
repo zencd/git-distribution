@@ -1,5 +1,8 @@
 import os
+import shutil
 import sys
+import tempfile
+import uuid
 from multiprocessing import Process
 from pathlib import Path
 
@@ -7,16 +10,18 @@ import pygit2
 
 app_dir = str(Path(__file__).parent.parent)
 local_history_file = os.path.join(app_dir, 'history.txt')
+git_url = 'https://github.com/zencd/git-distribution'
+git_branch = 'simple'
 
 
-def _git_clone_impl(git_url, repo_dir_tmp, git_branch):
+def _git_clone_impl(url, repo_dir_tmp, branch):
     """This method must be global"""
-    pygit2.clone_repository(git_url, repo_dir_tmp, checkout_branch=git_branch)
+    pygit2.clone_repository(url, repo_dir_tmp, checkout_branch=branch)
 
 
-def git_clone(git_url, repo_dir_tmp, git_branch):
+def git_clone(url, repo_dir, branch):
     """В новом процессе потому что pygit2 clone_repository оставляет файлы открытыми"""
-    p = Process(target=_git_clone_impl, args=(git_url, repo_dir_tmp, git_branch))
+    p = Process(target=_git_clone_impl, args=(url, repo_dir, branch))
     p.start()
     p.join()
     if p.exitcode != 0:
@@ -73,8 +78,18 @@ def get_remote_url(repo: pygit2.Repository):
     return None
 
 
+def ensure_git_dir():
+    local_git = os.path.join(app_dir, '.git')
+    if not os.path.exists(local_git):
+        tmp_repo_dir = os.path.join(tempfile.gettempdir(), uuid.uuid4().hex)
+        git_clone(git_url, tmp_repo_dir, git_branch)
+        tmp_git = os.path.join(tmp_repo_dir, '.git')
+        shutil.move(tmp_git, app_dir)
+
+
 def main():
     history_before = load_local_history(local_history_file)
+    ensure_git_dir()
     repo = pygit2.Repository(app_dir)
     url = get_remote_url(repo)
     print(f'Updating from {url} branch {repo.head.shorthand}')

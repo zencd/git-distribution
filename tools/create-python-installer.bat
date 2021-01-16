@@ -7,4 +7,5 @@
 :: 6) The sfx can be extracted like: python-3.9.1.exe -y -oTARGET_DIR
 
 set DIR=python-3.9.1
+del /s *.pyc
 "C:\Program Files\7-Zip\7z.exe" a "%DIR%.exe" -mmt -mx5 -sfx "%DIR%"
