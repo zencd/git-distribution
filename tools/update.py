@@ -3,6 +3,7 @@ import os
 import shutil
 import stat
 import sys
+import time
 from multiprocessing import Process
 from pathlib import Path
 
@@ -14,9 +15,10 @@ git_branch = 'single-branch'
 recent_commit_url = 'https://api.github.com/repos/zencd/git-distribution/commits/single-branch'
 app_dir = str(Path(__file__).parent.parent)
 work_dir = os.path.join(app_dir, 'work')
-repo_dir_tmp = os.path.join(work_dir, 'repo')
+versions_dir = os.path.join(work_dir, 'versions')
+new_ver_dir = os.path.join(versions_dir, str(int(time.time())))
 local_history_file = os.path.join(app_dir, 'history.txt')
-tmp_history_file = os.path.join(repo_dir_tmp, 'history.txt')
+tmp_history_file = os.path.join(new_ver_dir, 'history.txt')
 local_commit_file = os.path.join(work_dir, 'recent-commit.txt')
 
 
@@ -99,16 +101,16 @@ def print_history_diff(history_before, history_after):
             print(line)
 
 
-def copy_repo_tree(src_dir, dst_dir):
-    for f in os.listdir(src_dir):
-        if f != '.git':
-            src_full = os.path.join(src_dir, f)
-            dst_full = os.path.join(dst_dir, f)
-            if os.path.isdir(src_full):
-                rmtree(dst_full)
-                shutil.copytree(src_full, dst_full)
-            else:
-                shutil.copyfile(src_full, dst_full)
+# def copy_repo_tree(src_dir, dst_dir):
+#     for f in os.listdir(src_dir):
+#         if f != '.git':
+#             src_full = os.path.join(src_dir, f)
+#             dst_full = os.path.join(dst_dir, f)
+#             if os.path.isdir(src_full):
+#                 rmtree(dst_full)
+#                 shutil.copytree(src_full, dst_full)
+#             else:
+#                 shutil.copyfile(src_full, dst_full)
 
 
 def main():
@@ -120,14 +122,16 @@ def main():
     local_sha = read_current_sha()
     remote_sha = read_remote_sha()
 
-    rmtree(repo_dir_tmp)
-    git_clone(git_url, repo_dir_tmp, git_branch)
-    repo_tmp = pygit2.Repository(repo_dir_tmp)
+    rmtree(new_ver_dir)
+    git_clone(git_url, new_ver_dir, git_branch)
+    repo_tmp = pygit2.Repository(new_ver_dir)
     tmp_sha = read_repo_sha(repo_tmp)
+
+    app_dir_2 = os.getenv('APP_DIR')
 
     has_update = (local_sha != tmp_sha) or (local_sha is None)
     if has_update:
-        copy_repo_tree(repo_dir_tmp, app_dir)
+        # copy_repo_tree(repo_dir_tmp, app_dir)
         write_current_sha(tmp_sha)
         history_after = load_local_history(tmp_history_file)
         print_history_diff(history_before, history_after)
@@ -135,7 +139,7 @@ def main():
     else:
         print('Nothing to update')
 
-    rmtree(repo_dir_tmp)
+    # rmtree(new_ver_dir)
 
 
 if __name__ == '__main__':
