@@ -1,41 +1,16 @@
-import errno
-import json
 import os
-import shutil
-import stat
 import sys
-import time
 from multiprocessing import Process
 from pathlib import Path
 
 import pygit2
-import requests
 
-app_dir = os.getenv('APP_DIR') or str(Path(__file__).parent.parent)
-work_dir = os.path.join(app_dir, 'work')
-versions_dir = os.path.join(work_dir, 'versions')
-new_ver_dir_short = str(int(time.time()))
-new_ver_dir_full = os.path.join(versions_dir, new_ver_dir_short)
+app_dir = str(Path(__file__).parent.parent)
 local_history_file = os.path.join(app_dir, 'history.txt')
-tmp_history_file = os.path.join(new_ver_dir_full, 'history.txt')
-local_commit_file = os.path.join(work_dir, 'current-commit')
-cur_ver_file = os.path.join(work_dir, 'app-version')
-
-git_url = 'https://github.com/zencd/git-distribution'
-git_branch = 'single-branch'
-recent_commit_url = 'https://api.github.com/repos/zencd/git-distribution/commits/single-branch'
-
-
-def rmtree(dir_):
-    def onerror(func, path, exc_info):
-        os.chmod(path, stat.S_IWRITE)
-        func(path)
-
-    if os.path.exists(dir_):
-        shutil.rmtree(dir_, onerror=onerror)
 
 
 def _git_clone_impl(git_url, repo_dir_tmp, git_branch):
+    """This method must be global"""
     pygit2.clone_repository(git_url, repo_dir_tmp, checkout_branch=git_branch)
 
 
@@ -49,45 +24,31 @@ def git_clone(git_url, repo_dir_tmp, git_branch):
         sys.exit(1)
 
 
-def read_current_sha():
-    if os.path.exists(local_commit_file):
-        with open(local_commit_file, 'r') as fd:
-            return fd.read().strip()
-    else:
-        return None
-
-
-def write_current_sha(sha):
-    with open(local_commit_file, 'w') as fd:
-        return fd.write(sha)
-
-
-def read_remote_sha():
-    res = None
-    try:
-        resp = requests.get(recent_commit_url)
-        if resp.ok:
-            remote_commit = json.loads(resp.text)
-            res = remote_commit['sha']
-    except Exception as e:
-        print(f'Error: {e}')
-    return res
-
-
-def read_repo_sha(local_repo: pygit2.Repository):
-    if local_repo:
-        return local_repo.head.target.hex
-    return None
-
-
-'''
-def load_remote_history():
-    url = 'https://raw.githubusercontent.com/zencd/git-distribution/release/history.txt'
-    resp = requests.get(url)
-    if not resp.ok:
-        return []
-    return [line.strip() for line in resp.text.splitlines()]
-'''
+def git_pull(repo: pygit2.Repository, remote_name="origin"):
+    """
+    https://github.com/MichaelBoselowitz/pygit2-examples/blob/68e889e50a592d30ab4105a2e7b9f28fac7324c8/examples.py
+    """
+    branch = repo.head.shorthand
+    for remote in repo.remotes:
+        if remote.name == remote_name:
+            remote.fetch()
+            remote_master_id = repo.lookup_reference(f"refs/remotes/origin/{branch}").target
+            merge_result, _ = repo.merge_analysis(remote_master_id)
+            if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
+                # Up to date, do nothing
+                return False
+            elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
+                # We can just fastforward
+                repo.checkout_tree(repo.get(remote_master_id))
+                master_ref = repo.lookup_reference(f"refs/heads/{branch}")
+                master_ref.set_target(remote_master_id)
+                repo.head.set_target(remote_master_id)
+                return True
+            elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
+                raise Exception("Pulling remote changes leads to a conflict")
+            else:
+                raise AssertionError("Unknown merge analysis result")
+    raise Exception(f'No remote found: {remote_name}')
 
 
 def load_local_history(history_file):
@@ -105,67 +66,25 @@ def print_history_diff(history_before, history_after):
             print(line)
 
 
-# def copy_repo_tree(src_dir, dst_dir):
-#     for f in os.listdir(src_dir):
-#         if f != '.git':
-#             src_full = os.path.join(src_dir, f)
-#             dst_full = os.path.join(dst_dir, f)
-#             if os.path.isdir(src_full):
-#                 rmtree(dst_full)
-#                 shutil.copytree(src_full, dst_full)
-#             else:
-#                 shutil.copyfile(src_full, dst_full)
-
-
-def mkdirs_for_regular_file(filename: str):
-    """Создаёт все необходимые директории чтобы можно было записать указанный файл"""
-    dirname = os.path.dirname(filename)
-    if not os.path.exists(dirname):
-        try:
-            os.makedirs(dirname)
-        except OSError as e:  # Guard against race condition
-            if e.errno != errno.EEXIST:
-                raise
-
-
-def write_file(fname: str, content: str):
-    mkdirs_for_regular_file(fname)
-    with open(fname, 'w') as fd:
-        return fd.write(content)
+def get_remote_url(repo: pygit2.Repository):
+    for remote in repo.remotes:
+        if remote.name == 'origin':
+            return remote.url
+    return None
 
 
 def main():
-    print(f'App dir: {app_dir}')
-    print(f'Updating from {git_url} branch {git_branch}')
-    # print(f'File: {__file__}')
-    # print(f'APP_DIR: {os.getenv("APP_DIR")}')
-    # sys.exit(1)
-
-    # history_before = load_local_history(local_history_file)
-
-    # local_sha = read_current_sha()
-    # remote_sha = read_remote_sha()
-
-    rmtree(new_ver_dir_full)
-    git_clone(git_url, new_ver_dir_full, git_branch)
-    write_file(cur_ver_file, new_ver_dir_short)
-    print('Updated to the recent version')
-    # repo_tmp = pygit2.Repository(new_ver_dir)
-    # tmp_sha = read_repo_sha(repo_tmp)
-    #
-    # app_dir_2 = os.getenv('APP_DIR')
-    #
-    # has_update = (local_sha != tmp_sha) or (local_sha is None)
-    # if has_update:
-    #     # copy_repo_tree(repo_dir_tmp, app_dir)
-    #     write_current_sha(tmp_sha)
-    #     history_after = load_local_history(tmp_history_file)
-    #     print_history_diff(history_before, history_after)
-    #     print('Updated to the recent version')
-    # else:
-    #     print('Nothing to update')
-
-    # rmtree(new_ver_dir)
+    history_before = load_local_history(local_history_file)
+    repo = pygit2.Repository(app_dir)
+    url = get_remote_url(repo)
+    print(f'Updating from {url} branch {repo.head.shorthand}')
+    upd = git_pull(repo)
+    if upd:
+        print('Updated to the most recent version')
+        history_after = load_local_history(local_history_file)
+        print_history_diff(history_before, history_after)
+    else:
+        print('Already up to date')
 
 
 if __name__ == '__main__':
