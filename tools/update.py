@@ -88,8 +88,8 @@ def ensure_git_dir():
 
 
 def main():
-    history_before = load_local_history(local_history_file)
     ensure_git_dir()
+    history_before = load_local_history(local_history_file)
     repo = pygit2.Repository(app_dir)
     url = get_remote_url(repo)
     print(f'Updating from {url} branch {repo.head.shorthand}')
