@@ -1,0 +1,32 @@
+@echo off
+setlocal enableDelayedExpansion
+
+:: change PY_URL
+:: todo change PY_SFX to work/
+:: todo delete PY_SFX
+
+set APP_DIR=%~dp0
+set APP_DIR=%APP_DIR:~0,-1%
+set WORK_DIR=%APP_DIR%\work
+set MAIN_PY=%APP_DIR%\main.py
+set PY_VER=python-3.9.1
+set PY_EXE=%APP_DIR%\work\%PY_VER%\python.exe
+set PY_URL=https://raw.githubusercontent.com/zencd/git-distribution/release/README.md
+set PY_SFX=%APP_DIR%\tools\%PY_VER%.exe
+
+if not exist "%WORK_DIR%" mkdir "%WORK_DIR%"
+
+if not exist "%PY_EXE%" (
+    ::cscript "%APP_DIR%\tools\dl.vbs" "%PY_URL%" "%PY_SFX%"
+    ::if !errorlevel! neq 0 exit /b 1
+
+    echo Extracting python sfx
+    "%PY_SFX%" -y "-o%WORK_DIR%"
+    if !errorlevel! neq 0 exit /b 1
+
+    echo Installing requirements.txt
+    "%PY_EXE%" -m pip install -r "%APP_DIR%\requirements.txt"
+    if !errorlevel! neq 0 exit /b 1
+)
+
+"%PY_EXE%" "%MAIN_PY%" %*
