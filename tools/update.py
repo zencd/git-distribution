@@ -126,7 +126,7 @@ def main():
 
     has_update = (local_sha != tmp_sha) or (local_sha is None)
     if has_update:
-        copy_repo_tree(repo_dir_tmp, 'C:\\tempo\\333')
+        copy_repo_tree(repo_dir_tmp, app_dir)
         write_current_sha(tmp_sha)
         history_after = load_local_history(tmp_history_file)
         print_history_diff(history_before, history_after)
