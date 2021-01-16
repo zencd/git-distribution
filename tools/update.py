@@ -1,3 +1,4 @@
+import errno
 import json
 import os
 import shutil
@@ -10,16 +11,19 @@ from pathlib import Path
 import pygit2
 import requests
 
+app_dir = os.getenv('APP_DIR') or str(Path(__file__).parent.parent)
+work_dir = os.path.join(app_dir, 'work')
+versions_dir = os.path.join(work_dir, 'versions')
+new_ver_dir_short = str(int(time.time()))
+new_ver_dir_full = os.path.join(versions_dir, new_ver_dir_short)
+local_history_file = os.path.join(app_dir, 'history.txt')
+tmp_history_file = os.path.join(new_ver_dir_full, 'history.txt')
+local_commit_file = os.path.join(work_dir, 'current-commit')
+cur_ver_file = os.path.join(work_dir, 'app-version')
+
 git_url = 'https://github.com/zencd/git-distribution'
 git_branch = 'single-branch'
 recent_commit_url = 'https://api.github.com/repos/zencd/git-distribution/commits/single-branch'
-app_dir = str(Path(__file__).parent.parent)
-work_dir = os.path.join(app_dir, 'work')
-versions_dir = os.path.join(work_dir, 'versions')
-new_ver_dir = os.path.join(versions_dir, str(int(time.time())))
-local_history_file = os.path.join(app_dir, 'history.txt')
-tmp_history_file = os.path.join(new_ver_dir, 'history.txt')
-local_commit_file = os.path.join(work_dir, 'recent-commit.txt')
 
 
 def rmtree(dir_):
@@ -113,31 +117,53 @@ def print_history_diff(history_before, history_after):
 #                 shutil.copyfile(src_full, dst_full)
 
 
+def mkdirs_for_regular_file(filename: str):
+    """Создаёт все необходимые директории чтобы можно было записать указанный файл"""
+    dirname = os.path.dirname(filename)
+    if not os.path.exists(dirname):
+        try:
+            os.makedirs(dirname)
+        except OSError as e:  # Guard against race condition
+            if e.errno != errno.EEXIST:
+                raise
+
+
+def write_file(fname: str, content: str):
+    mkdirs_for_regular_file(fname)
+    with open(fname, 'w') as fd:
+        return fd.write(content)
+
+
 def main():
     print(f'App dir: {app_dir}')
     print(f'Updating from {git_url} branch {git_branch}')
+    # print(f'File: {__file__}')
+    # print(f'APP_DIR: {os.getenv("APP_DIR")}')
+    # sys.exit(1)
 
-    history_before = load_local_history(local_history_file)
+    # history_before = load_local_history(local_history_file)
 
-    local_sha = read_current_sha()
-    remote_sha = read_remote_sha()
+    # local_sha = read_current_sha()
+    # remote_sha = read_remote_sha()
 
-    rmtree(new_ver_dir)
-    git_clone(git_url, new_ver_dir, git_branch)
-    repo_tmp = pygit2.Repository(new_ver_dir)
-    tmp_sha = read_repo_sha(repo_tmp)
-
-    app_dir_2 = os.getenv('APP_DIR')
-
-    has_update = (local_sha != tmp_sha) or (local_sha is None)
-    if has_update:
-        # copy_repo_tree(repo_dir_tmp, app_dir)
-        write_current_sha(tmp_sha)
-        history_after = load_local_history(tmp_history_file)
-        print_history_diff(history_before, history_after)
-        print('Updated to the recent version')
-    else:
-        print('Nothing to update')
+    rmtree(new_ver_dir_full)
+    git_clone(git_url, new_ver_dir_full, git_branch)
+    write_file(cur_ver_file, new_ver_dir_short)
+    print('Updated to the recent version')
+    # repo_tmp = pygit2.Repository(new_ver_dir)
+    # tmp_sha = read_repo_sha(repo_tmp)
+    #
+    # app_dir_2 = os.getenv('APP_DIR')
+    #
+    # has_update = (local_sha != tmp_sha) or (local_sha is None)
+    # if has_update:
+    #     # copy_repo_tree(repo_dir_tmp, app_dir)
+    #     write_current_sha(tmp_sha)
+    #     history_after = load_local_history(tmp_history_file)
+    #     print_history_diff(history_before, history_after)
+    #     print('Updated to the recent version')
+    # else:
+    #     print('Nothing to update')
 
     # rmtree(new_ver_dir)
 

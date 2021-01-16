@@ -1,16 +1,25 @@
-::@echo off
+@echo off
 setlocal enableDelayedExpansion
 
 set APP_DIR=%~dp0
 set APP_DIR=%APP_DIR:~0,-1%
 set WORK_DIR=%APP_DIR%\work
-set MAIN_PY=%APP_DIR%\main.py
 set PY_VER=python-3.9.1
 set PY_EXE=%APP_DIR%\work\%PY_VER%\python.exe
 set PY_URL=https://github.com/zencd/git-distribution/releases/download/python-3.9.1/python-3.9.1.exe
 set PY_SFX=%APP_DIR%\work\%PY_VER%.exe
+set VER_DIR=%APP_DIR%
+set APP_VER_FILE=%WORK_DIR%\app-version
+set VERSIONS_DIR=%WORK_DIR%\versions
+set APP_VER=
 
 if not exist "%WORK_DIR%" mkdir "%WORK_DIR%"
+if not exist "%VERSIONS_DIR%" mkdir "%VERSIONS_DIR%"
+
+if exist "%APP_VER_FILE%" set /p APP_VER=<"%APP_VER_FILE%"
+if not "%APP_VER%" == "" set VER_DIR=%VERSIONS_DIR%\%APP_VER%
+set MAIN_PY=%VER_DIR%\main.py
+::exit 1
 
 if not exist "%PY_EXE%" (
     echo Downloading python from %PY_URL%
@@ -31,10 +40,15 @@ if not exist "%PY_EXE%" (
 
 if "%1" == "--update" (
     set PYTHONPATH=%APP_DIR%\tools
+    :: todo use VER_DIR
+    :: todo use VER_DIR
+    :: todo use VER_DIR
     "%PY_EXE%" "%APP_DIR%\tools\update.py"
+    ::"%PY_EXE%" "%VER_DIR%\tools\update.py"
     goto end
 )
 
+echo MAIN_PY: %MAIN_PY%
 "%PY_EXE%" "%MAIN_PY%" %*
 
 :end
