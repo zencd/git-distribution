@@ -9,7 +9,7 @@ from pathlib import Path
 import pygit2
 
 app_dir = str(Path(__file__).parent.parent)
-local_history_file = os.path.join(app_dir, 'history.txt')
+version_log_file = os.path.join(app_dir, 'history.txt')
 git_url = 'https://github.com/zencd/git-distribution'
 git_branch = 'simple'
 
@@ -89,14 +89,14 @@ def ensure_git_dir():
 
 def main():
     ensure_git_dir()
-    history_before = load_local_history(local_history_file)
+    history_before = load_local_history(version_log_file)
     repo = pygit2.Repository(app_dir)
     url = get_remote_url(repo)
     print(f'Updating from {url} branch {repo.head.shorthand}')
     upd = git_pull(repo)
     if upd:
         print('Updated to the most recent version')
-        history_after = load_local_history(local_history_file)
+        history_after = load_local_history(version_log_file)
         print_history_diff(history_before, history_after)
     else:
         print('Already up to date')
