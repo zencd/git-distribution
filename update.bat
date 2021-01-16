@@ -1,4 +1,4 @@
-::@echo off
+@echo off
 setlocal enableDelayedExpansion
 
 set APP_DIR=%~dp0
