@@ -1,10 +1,6 @@
 @echo off
 setlocal enableDelayedExpansion
 
-:: change PY_URL
-:: todo change PY_SFX to work/
-:: todo delete PY_SFX
-
 set APP_DIR=%~dp0
 set APP_DIR=%APP_DIR:~0,-1%
 set WORK_DIR=%APP_DIR%\work
@@ -17,7 +13,7 @@ set PY_SFX=%APP_DIR%\work\%PY_VER%.exe
 if not exist "%WORK_DIR%" mkdir "%WORK_DIR%"
 
 if not exist "%PY_EXE%" (
-    echo Downloading python from "%PY_URL%"
+    echo Downloading python from %PY_URL%
     cscript //nologo "%APP_DIR%\tools\dl.vbs" "%PY_URL%" "%PY_SFX%"
     if !errorlevel! neq 0 exit /b 1
     if not exist "%PY_SFX%" exit /b 1
@@ -28,7 +24,7 @@ if not exist "%PY_EXE%" (
 
     del /f "%PY_SFX%"
 
-    echo Installing requirements.txt
+    echo Installing python requirements
     "%PY_EXE%" -m pip install -r "%APP_DIR%\requirements.txt"
     if !errorlevel! neq 0 exit /b 1
 )
