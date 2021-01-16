@@ -11,3 +11,5 @@ Write a Python based app template which:
 ## Windows Install
 
 - https://github.com/zencd/pythonic-distribution/archive/release.zip
+
+v2
