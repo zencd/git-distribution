@@ -32,6 +32,9 @@ if not exist "%PY_EXE%" (
 if "%1" == "--update" (
     set PYTHONPATH=%APP_DIR%\tools
     "%PY_EXE%" "%APP_DIR%\tools\update.py"
+    if !errorlevel! neq 0 exit /b 1
+    "%PY_EXE%" -m pip install -r "%APP_DIR%\requirements.txt"
+    if !errorlevel! neq 0 exit /b 1
     goto end
 )
 
