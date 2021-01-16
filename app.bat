@@ -11,18 +11,22 @@ set WORK_DIR=%APP_DIR%\work
 set MAIN_PY=%APP_DIR%\main.py
 set PY_VER=python-3.9.1
 set PY_EXE=%APP_DIR%\work\%PY_VER%\python.exe
-set PY_URL=https://raw.githubusercontent.com/zencd/git-distribution/release/README.md
-set PY_SFX=%APP_DIR%\tools\%PY_VER%.exe
+set PY_URL=https://github.com/zencd/git-distribution/releases/download/python-3.9.1/python-3.9.1.exe
+set PY_SFX=%APP_DIR%\work\%PY_VER%.exe
 
 if not exist "%WORK_DIR%" mkdir "%WORK_DIR%"
 
 if not exist "%PY_EXE%" (
-    ::cscript "%APP_DIR%\tools\dl.vbs" "%PY_URL%" "%PY_SFX%"
-    ::if !errorlevel! neq 0 exit /b 1
+    echo Downloading python from "%PY_URL%"
+    cscript //nologo "%APP_DIR%\tools\dl.vbs" "%PY_URL%" "%PY_SFX%"
+    if !errorlevel! neq 0 exit /b 1
+    if not exist "%PY_SFX%" exit /b 1
 
     echo Extracting python sfx
     "%PY_SFX%" -y "-o%WORK_DIR%"
     if !errorlevel! neq 0 exit /b 1
+
+    del /f "%PY_SFX%"
 
     echo Installing requirements.txt
     "%PY_EXE%" -m pip install -r "%APP_DIR%\requirements.txt"
