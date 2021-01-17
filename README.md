@@ -12,4 +12,4 @@ Write a Python based app template which:
 
 - https://github.com/zencd/pythonic-distribution/archive/release.zip
 
-v2
+v3
