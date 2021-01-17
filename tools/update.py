@@ -1,5 +1,6 @@
 import os
 import shutil
+import stat
 import sys
 import tempfile
 import uuid
@@ -8,10 +9,12 @@ from pathlib import Path
 
 import pygit2
 
-app_dir = str(Path(__file__).parent.parent)
-version_log_file = os.path.join(app_dir, 'history.txt')
 git_url = 'https://github.com/zencd/git-distribution'
 git_branch = 'simple'
+
+app_dir = str(Path(__file__).parent.parent)
+version_log_file = os.path.join(app_dir, 'history.txt')
+do_hard_reset = int(os.getenv('DO_HARD_RESET', '0'))
 
 
 def _git_clone_impl(url, repo_dir_tmp, branch):
@@ -40,10 +43,12 @@ def git_pull(repo: pygit2.Repository, remote_name="origin"):
             remote_master_id = repo.lookup_reference(f"refs/remotes/origin/{branch}").target
             merge_result, _ = repo.merge_analysis(remote_master_id)
             if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
+                print('up to date')
                 # Up to date, do nothing
                 return False
             elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
                 # We can just fastforward
+                print('fastforward')
                 repo.checkout_tree(repo.get(remote_master_id))
                 master_ref = repo.lookup_reference(f"refs/heads/{branch}")
                 master_ref.set_target(remote_master_id)
@@ -54,6 +59,14 @@ def git_pull(repo: pygit2.Repository, remote_name="origin"):
             else:
                 raise AssertionError("Unknown merge analysis result")
     raise Exception(f'No remote found: {remote_name}')
+
+
+def git_hard_reset(repo: pygit2.Repository):
+    # If some local file has been altered the following pull may fail.
+    # So let's discard all possible changes.
+    # This is applicable for an end user windows distribution,
+    #  but unacceptable during development, so there is an `if`.
+    repo.reset(repo.head.target, pygit2.GIT_RESET_HARD)
 
 
 def load_local_history(history_file):
@@ -87,12 +100,24 @@ def ensure_git_dir():
         shutil.move(tmp_git, app_dir)
 
 
+def rmtree(dir_):
+    def onerror(func, path, exc_info):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+
+    if os.path.exists(dir_):
+        shutil.rmtree(dir_, onerror=onerror)
+
+
 def main():
     ensure_git_dir()
     history_before = load_local_history(version_log_file)
     repo = pygit2.Repository(app_dir)
     url = get_remote_url(repo)
     print(f'Updating from {url} branch {repo.head.shorthand}')
+    if do_hard_reset:
+        print('Hard resetting...')
+        git_hard_reset(repo)
     upd = git_pull(repo)
     if upd:
         print('Updated to the most recent version')
