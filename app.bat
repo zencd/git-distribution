@@ -44,7 +44,6 @@ if "%1" == "--update" (
 )
 
 :: Start the app
-echo MAIN_PY: %MAIN_PY%
 "%PY_EXE%" "%MAIN_PY%" %*
 
 :end
