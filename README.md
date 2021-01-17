@@ -23,6 +23,6 @@ Specifically:
 ## Usage
 
 - `app.bat` for the app's main functionality
-- `update.bat` to update the app to the most recent version
+- `update.bat` to make the app yet more up-to-date
 
 v3
