@@ -130,4 +130,5 @@ dmypy.json
 
 /.idea/
 /work/
-/tools/python-*
+/tools/appname/
+/tools/*.zip
