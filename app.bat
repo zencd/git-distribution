@@ -12,8 +12,6 @@ set MAIN_PY=%APP_DIR%\main.py
 
 if not exist "%WORK_DIR%" mkdir "%WORK_DIR%"
 
-:: Install python if not yet
-if not exist "%PY_EXE%" (
 :: Update the app. Called from update.bat
 if "%1" == "--update" (
     set PYTHONPATH=%APP_DIR%\tools
