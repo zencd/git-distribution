@@ -4,7 +4,7 @@ setlocal enableDelayedExpansion
 set APP_DIR=%~dp0
 set APP_DIR=%APP_DIR:~0,-1%
 set WORK_DIR=%APP_DIR%\work
-set PY_VER=python-3.9.1
+set PY_VER=python-3.8.7
 set PY_EXE=%APP_DIR%\work\%PY_VER%\python.exe
 
 if exist "repo_tmp" rmdir /S /Q "repo_tmp"
