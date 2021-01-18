@@ -1,4 +1,4 @@
-if not exist appname\work\python-3.9.1 exit /b 1
+if not exist appname\work\python-3.9.1\python.exe exit /b 1
 del /s "*.pyc"
 del "appname.zip"
 copy install.bat appname
